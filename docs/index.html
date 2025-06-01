@@ -1,21 +1,203 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Webpage</title>
-    <link rel="stylesheet" href="styles/style.css">
+  <meta charset="UTF-8" />
+  <title>가위바위보 게임</title>
+  <style>
+    body, html {
+      height: 100%;
+      margin: 0;
+      overflow-y: auto; /* 스크롤 가능하게 */
+    }
+    .center-container {
+      /* height: 100vh;  <= 이 줄을 삭제 또는 주석 처리 */
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    .button-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .modal-bg {
+      position: fixed; left:0; top:0; width:100vw; height:100vh;
+      background:rgba(0,0,0,0.3); display:none; justify-content:center; align-items:center;
+      z-index: 1000;
+    }
+    .modal {
+      background: #fff; padding: 32px; border-radius: 12px; min-width: 320px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    #output {
+      max-height: 60vh;
+      overflow-y: auto;
+      width: 100%;
+      text-align: center; /* 결과를 중앙 정렬 */
+      border: 2px solid #888;      /* 외각선 추가 */
+      border-radius: 10px;         /* 모서리 둥글게 */
+      box-sizing: border-box;      /* 패딩/보더 포함 크기 */
+      padding: 16px;               /* 안쪽 여백 */
+      background: #fafbfc;         /* 약간 밝은 배경 */
+      margin-top: 16px;            /* 버튼과 간격 */
+  }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>Welcome to My Webpage</h1>
-    </header>
-    <main>
-        <p>This is a simple webpage built with JavaScript, HTML, and CSS.</p>
-    </main>
-    <footer>
-        <p>&copy; 2023 My Webpage</p>
-    </footer>
-    <script src="src/index.js"></script>
+  <div class="center-container">
+    <h2 style="margin-bottom: 32px;">가위바위보 알고리즘 대결</h2>
+    <!-- 플레이어 알고리즘 입력창 추가 -->
+    <div style="width: 100%; max-width: 500px; margin-bottom: 24px;">
+      <label for="playerAlgo" style="font-weight:bold;">내 알고리즘 (연습에서만 사용)(Javascript용):</label>
+      <textarea id="playerAlgo" rows="5" maxlength="1000" style="width:100%;font-family:monospace;">
+function strategyA(history) {
+  // history: [{me: "rock", opponent: "scissors"}, ...]
+  return "rock";
+}
+      </textarea>
+    </div>
+    <div class="button-row">
+      <button id="startBtn">게임 시작</button>
+      <button id="practiceBtn">연습</button>
+    </div>
+    <div id="output"></div>
+  </div>
+  <div class="modal-bg" id="modalBg">
+    <div class="modal" id="modal">
+      <div id="modalContent"></div>
+      <div style="text-align:right;">
+        <button id="modalOkBtn">확인</button>
+        <button id="modalCancelBtn">취소</button>
+      </div>
+    </div>
+  </div>
+  <script src="JavascriptTest.js"></script>
+  <script src="strategyA.js"></script>
+  <script src="strategyB.js"></script>
+  <script src="strategyBOT.js"></script>
+  <script>
+    // 모달 관련
+    const modalBg = document.getElementById('modalBg');
+    const modalContent = document.getElementById('modalContent');
+    const modalOkBtn = document.getElementById('modalOkBtn');
+    const modalCancelBtn = document.getElementById('modalCancelBtn');
+    let modalResolve = null;
+
+    function showModal(html) {
+      modalContent.innerHTML = html;
+      modalBg.style.display = 'flex';
+      return new Promise((resolve) => {
+        modalResolve = resolve;
+      });
+    }
+    function closeModal() {
+      modalBg.style.display = 'none';
+      modalResolve = null;
+    }
+    modalCancelBtn.onclick = () => {
+      closeModal();
+      if (modalResolve) modalResolve(null);
+    };
+    modalOkBtn.onclick = () => {
+      if (modalResolve) {
+        const input = document.getElementById('modalInput');
+        const select = document.getElementById('botSelect');
+        modalResolve(input ? input.value : (select ? select.value : null));
+      }
+      closeModal();
+    };
+
+    // 게임 시작 버튼
+    document.getElementById('startBtn').onclick = async () => {
+      // 1. 이름 입력 모달
+      const nameHtml = `
+        <label>Player A 이름:<br><input id="nameA" type="text" value="Player A" /></label><br>
+        <label>Player B 이름:<br><input id="nameB" type="text" value="Player B" /></label>
+      `;
+      await showModal(nameHtml); // 이름 입력 모달 표시
+      const nameA = document.getElementById('nameA').value || "Player A";
+      const nameB = document.getElementById('nameB').value || "Player B";
+
+      // 2. 판 수 입력 모달
+      const inputHtml = '<label>몇 판을 대결하시겠습니까?<br><input id="modalInput" type="number" min="1" value="10" /></label>';
+      await showModal(inputHtml); // 판 수 입력 모달 표시
+      const count = document.getElementById('modalInput').value;
+
+      if (count !== null && count !== "" && !isNaN(count) && count > 0) {
+        window.promptInput = count;
+        window.playerAName = nameA;
+        window.playerBName = nameB;
+        // strategyA와 strategyB를 원래대로 복원
+        if (typeof window.strategyA_fromFile === "function") {
+          window.strategyA = window.strategyA_fromFile;
+        }
+        if (typeof window.strategyB_fromFile === "function") {
+          window.strategyB = window.strategyB_fromFile;
+        }
+        window.playMultipleMatches();
+      }
+    };
+
+    // 연습 버튼
+    document.getElementById('practiceBtn').onclick = async () => {
+      const botList = [
+        { name: "랜덤봇", func: "strategyRandom" },
+        { name: "가위만내봇", func: "strategyAlwaysScissors" },
+        { name: "순환봇", func: "strategyCycle" },
+        { name: "미러링봇", func: "strategyMirror" },
+        { name: "카운터봇", func: "strategyCounter" },
+        { name: "빈도봇", func: "strategyFrequency" },
+        { name: "마르코프봇", func: "strategyMarkov" },
+        { name: "메타봇", func: "strategyMeta" },
+        { name: "미끼봇", func: "strategyBaiting" },
+        { name: "반복탐지봇", func: "strategyRepetitionSniffer" },
+        { name: "혼합봇", func: "strategyEnsemble" },
+        { name: "트렌드봇", func: "strategyTrend" },
+        { name: "2차예측봇", func: "strategySecondOrder" }
+      ];
+      const selectHtml = `
+        <label>연습 상대를 선택하세요:<br>
+          <select id="botSelect">
+            ${botList.map(b => `<option value="${b.func}">${b.name}</option>`).join("")}
+          </select>
+        </label>
+        <label>몇 판을 대결하시겠습니까?<br><input id="modalInput" type="number" min="1" value="10" /></label>
+      `;
+      const result = await showModal(selectHtml);
+      if (result !== null) {
+        const botFunc = document.getElementById('botSelect').value;
+        const count = document.getElementById('modalInput').value;
+        if (!count || isNaN(count) || count <= 0) return;
+        window.promptInput = count;
+        window.playerAName = "나";
+        window.playerBName = botList.find(b => b.func === botFunc).name;
+        // 플레이어 알고리즘 입력값을 함수로 변환하여 strategyA로 사용
+        try {
+          const userCode = document.getElementById('playerAlgo').value;
+          // eslint-disable-next-line no-eval
+          eval(userCode); // strategyA 함수가 전역에 정의됨
+          window.strategyA = strategyA;
+        } catch (e) {
+          alert("알고리즘 코드에 오류가 있습니다:\n" + e.message);
+          return;
+        }
+        window.strategyB = window[botFunc];
+        playMultipleMatches();
+      }
+    };
+
+    // 파일 로드 시 strategyA.js, strategyB.js의 원본을 저장
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof window.strategyA === "function") {
+        window.strategyA_fromFile = window.strategyA;
+      }
+      if (typeof window.strategyB === "function") {
+        window.strategyB_fromFile = window.strategyB;
+      }
+    });
+  </script>
 </body>
 </html>

@@ -1,0 +1,79 @@
+    // 25.06.01
+
+    저는 웹 기반 가위바위보 알고리즘 대결 플랫폼을 개발하고 있습니다.
+아래와 같은 구조, 기능, UI/UX, 코드 스타일을 갖고 있습니다.
+
+1. index.html
+레이아웃 및 구조
+
+.center-container를 사용해 전체를 flex column 중앙 정렬, min-height 100vh
+상단에 제목(h2, "가위바위보 알고리즘 대결")
+그 아래에 내 알고리즘 입력창(최대 1000자 textarea, 기본 예시코드 포함)
+버튼 행(.button-row)에 "게임 시작", "연습" 버튼이 나란히 배치
+버튼 바로 아래에 결과창(<div id="output"></div>)이 중앙에 위치
+결과창 스타일
+
+#output은
+최대 높이 60vh, 내부 스크롤 가능(overflow-y: auto)
+100% 너비, 중앙 정렬(text-align: center)
+2px 회색 외각선, 10px 둥근 모서리, 밝은 배경(#fafbfc)
+16px 패딩, margin-top 16px
+box-sizing: border-box
+모달 입력
+
+이름, 판수, 연습 상대 선택 등은 모두 커스텀 모달로 입력받음
+모달은 화면 전체를 덮는 반투명 배경 위에 중앙에 표시됨
+모달에는 확인/취소 버튼이 있음
+스크립트 구조
+
+JavascriptTest.js, strategyA.js, strategyB.js, strategyBOT.js를 순서대로 로드
+모달 관련 함수(showModal, closeModal 등)와 버튼 이벤트 핸들러가 내장됨
+2. JavascriptTest.js
+핵심 함수
+
+playMultipleMatches (async)
+window.playerAName, window.playerBName에서 이름을 받아 사용
+window.promptInput에서 판수(count)를 받아 사용
+전략 함수(strategyA, strategyB)는 각각 별도 파일에서 불러오거나, 연습 모드에서는 동적으로 eval
+각 라운드마다 결과를 최신 라운드가 위에 쌓이도록(unshift) 배열에 저장
+각 라운드마다 0.1초 간격으로 실시간 출력(비동기)
+대결이 끝난 뒤, "결과 요약"을 마지막 라운드 바로 위에 삽입
+결과창에는 대결 시작 안내, 총 판수, 각 라운드 결과, 결과 요약이 순서대로 출력됨
+스타일 함수
+
+colorizeName(name, isA) : A는 빨강, B는 파랑, 굵게
+colorizeMove(move, isWinner) : 모두 검정, 이긴 쪽만 bold
+기타
+
+strategyA.js, strategyB.js에서 불러온 원본 함수를 window에 저장해두고, "게임 시작" 시 복원
+연습 모드에서는 textarea의 코드를 eval하여 strategyA로 사용, strategyB는 선택한 봇 함수로 지정
+3. strategyA.js / strategyB.js / strategyBOT.js
+strategyA.js / strategyB.js
+
+각각 strategyA, strategyB 함수 정의 및 window에 등록
+history 인자를 받아 다음 수("rock", "paper", "scissors")를 반환
+strategyBOT.js
+
+다양한 연습 상대 봇 함수(strategyRandom, strategyCounter, strategyFrequency, 등) 정의
+4. UI/UX 특징 및 요구사항
+결과창이 항상 버튼 아래 중앙에 위치, 외각선/둥근 모서리/밝은 배경/스크롤 적용
+최신 라운드가 위, 오래된 라운드가 아래로 쌓임
+대결 종료 후 "결과 요약"이 마지막 라운드 위에 표시됨
+이름, 판수, 연습 상대 등 모든 입력은 모달로 받고, 판수 기본값은 10
+연습 버튼에서 내 알고리즘을 eval로 적용, 상대는 선택
+코드와 UI 모두 사용자 친화적으로 설계
+5. 상호작용 흐름
+게임 시작
+
+"게임 시작" 버튼 클릭 → 이름 입력 모달 → 판수 입력 모달(기본값 10)
+strategyA, strategyB는 각 파일에서 불러온 원본 함수로 복원
+playMultipleMatches 실행, 결과가 실시간으로 출력
+연습
+
+"연습" 버튼 클릭 → 연습 상대 선택 및 판수 입력 모달(기본값 10)
+textarea의 코드를 eval하여 strategyA로 사용, 선택한 봇을 strategyB로 지정
+playMultipleMatches 실행, 결과가 실시간으로 출력
+6. 코드 스타일 및 확장성
+함수, 변수, 스타일 모두 일관성 있게 작성
+모든 주요 입력은 모달로 받고, 버튼/입력창/결과창 모두 중앙 정렬
+추가 봇 전략, 결과 애니메이션, 모바일 최적화, 코드 리팩토링, 테스트 코드, UI 개선 등 확장 가능
